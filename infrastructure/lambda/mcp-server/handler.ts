@@ -21,6 +21,9 @@ const s3Client = new S3Client({});
 
 const { DOCS_BUCKET, INDEX_TABLE, STAGE } = process.env;
 
+// Maximum response size in bytes (10MB for API Gateway)
+const MAX_RESPONSE_SIZE = 10 * 1024 * 1024;
+
 interface MCPRequest {
   jsonrpc: '2.0';
   id: string | number;
@@ -101,6 +104,46 @@ const lambdaHandler = async (
         );
     }
     
+    const responseBody = JSON.stringify(response);
+    
+    // Check response size
+    const responseSize = Buffer.byteLength(responseBody);
+    if (responseSize > MAX_RESPONSE_SIZE) {
+      logger.error('Response too large', { 
+        size: responseSize, 
+        maxSize: MAX_RESPONSE_SIZE,
+        method: request.method 
+      });
+      return {
+        statusCode: 413,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: request.id,
+          error: {
+            code: -32603,
+            message: 'Response too large',
+            data: { 
+              size: responseSize, 
+              maxSize: MAX_RESPONSE_SIZE,
+              hint: 'Use pagination parameters to reduce response size'
+            },
+          },
+        }),
+      };
+    }
+    
+    // Log warning for large responses
+    if (responseSize > 100 * 1024) { // 100KB
+      logger.warn('Large response size', { 
+        size: responseSize, 
+        method: request.method 
+      });
+    }
+    
     return {
       statusCode: 200,
       headers: {
@@ -108,7 +151,7 @@ const lambdaHandler = async (
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Credentials': 'true',
       },
-      body: JSON.stringify(response),
+      body: responseBody,
     };
     
   } catch (error) {
@@ -226,6 +269,18 @@ async function handleToolsList(request: MCPRequest): Promise<MCPResponse> {
             type: 'string',
             description: 'Filter by category',
           },
+          page: {
+            type: 'number',
+            description: 'Page number (0-based)',
+            default: 0,
+          },
+          pageSize: {
+            type: 'number',
+            description: 'Number of items per page',
+            default: 50,
+            minimum: 1,
+            maximum: 100,
+          },
         },
       },
     },
@@ -247,6 +302,89 @@ async function handleToolsList(request: MCPRequest): Promise<MCPResponse> {
           },
         },
         required: ['schemaName'],
+      },
+    },
+    {
+      name: 'list_schemas',
+      description: 'List all available API schemas',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          page: {
+            type: 'number',
+            description: 'Page number (0-based)',
+            default: 0,
+          },
+          pageSize: {
+            type: 'number',
+            description: 'Number of items per page',
+            default: 50,
+            minimum: 1,
+            maximum: 100,
+          },
+        },
+      },
+    },
+    {
+      name: 'get_document',
+      description: 'Get any document by its ID or path',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          documentId: {
+            type: 'string',
+            description: 'Document ID or path (e.g., "authentication" or "guides/authentication")',
+          },
+        },
+        required: ['documentId'],
+      },
+    },
+    {
+      name: 'list_guides',
+      description: 'List all available guides',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          page: {
+            type: 'number',
+            description: 'Page number (0-based)',
+            default: 0,
+          },
+          pageSize: {
+            type: 'number',
+            description: 'Number of items per page',
+            default: 50,
+            minimum: 1,
+            maximum: 100,
+          },
+        },
+      },
+    },
+    {
+      name: 'list_resources',
+      description: 'List all available resources by category',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          category: {
+            type: 'string',
+            enum: ['api', 'guide', 'reference', 'all'],
+            description: 'Filter resources by category',
+            default: 'all',
+          },
+          page: {
+            type: 'number',
+            description: 'Page number (0-based)',
+            default: 0,
+          },
+          pageSize: {
+            type: 'number',
+            description: 'Number of items per page',
+            default: 50,
+            minimum: 1,
+            maximum: 100,
+          },
+        },
       },
     },
   ];
@@ -596,22 +734,63 @@ async function handleToolCall(request: MCPRequest): Promise<MCPResponse> {
   logger.info('Tool call', { tool: name, arguments: args });
 
   try {
+    let toolResult: any;
+    
     switch (name) {
       case 'search_documentation':
-        return await searchDocumentation(request.id, args);
+        toolResult = await searchDocumentation(request.id, args);
+        break;
         
       case 'get_endpoint_details':
-        return await getEndpointDetails(request.id, args);
+        toolResult = await getEndpointDetails(request.id, args);
+        break;
         
       case 'list_endpoints':
-        return await listEndpoints(request.id, args);
+        toolResult = await listEndpoints(request.id, args);
+        break;
         
       case 'get_schema':
-        return await getSchema(request.id, args);
+        toolResult = await getSchema(request.id, args);
+        break;
+        
+      case 'list_schemas':
+        toolResult = await listSchemas(request.id, args);
+        break;
+        
+      case 'get_document':
+        toolResult = await getDocument(request.id, args);
+        break;
+        
+      case 'list_guides':
+        toolResult = await listGuides(request.id, args);
+        break;
+        
+      case 'list_resources':
+        toolResult = await listResources(request.id, args);
+        break;
         
       default:
         return createErrorResponse(request.id, -32602, `Unknown tool: ${name}`);
     }
+    
+    // If the tool returned an error response, return it as-is
+    if (toolResult.error) {
+      return toolResult;
+    }
+    
+    // Wrap the tool result in MCP-compliant format
+    return {
+      jsonrpc: '2.0',
+      id: request.id,
+      result: {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(toolResult.result, null, 2)
+          }
+        ]
+      }
+    };
   } catch (error) {
     logger.error('Error executing tool', { error, tool: name });
     return createErrorResponse(request.id, -32603, 'Tool execution failed');
@@ -686,7 +865,7 @@ async function getEndpointDetails(id: string | number, args: any): Promise<MCPRe
 }
 
 async function listEndpoints(id: string | number, args: any): Promise<MCPResponse> {
-  const { tag } = args || {};
+  const { tag, page = 0, pageSize = 50 } = args || {};
   
   // Query all API documents
   const response = await docClient.send(new QueryCommand({
@@ -701,12 +880,26 @@ async function listEndpoints(id: string | number, args: any): Promise<MCPRespons
 
   let endpoints = response.Items || [];
   
+  // Filter out schemas - only include items that have 'endpoint' in their tags
+  endpoints = endpoints.filter(item => 
+    item.tags && item.tags.includes('endpoint')
+  );
+  
   // Filter by tag if provided
   if (tag) {
     endpoints = endpoints.filter(item => item.tags?.includes(tag));
   }
 
-  const result = endpoints.map(item => ({
+  // Calculate pagination
+  const totalItems = endpoints.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = page * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  
+  // Get the page of results
+  const paginatedEndpoints = endpoints.slice(startIndex, endIndex);
+  
+  const result = paginatedEndpoints.map(item => ({
     id: item.id,
     path: item.path,
     method: item.method,
@@ -717,7 +910,16 @@ async function listEndpoints(id: string | number, args: any): Promise<MCPRespons
   return {
     jsonrpc: '2.0',
     id,
-    result: { endpoints: result },
+    result: { 
+      endpoints: result,
+      pagination: {
+        page,
+        pageSize,
+        totalPages,
+        totalItems,
+        hasMore: page < totalPages - 1
+      }
+    },
   };
 }
 
@@ -761,6 +963,240 @@ async function getSchema(id: string | number, args: any): Promise<MCPResponse> {
       },
     },
   };
+}
+
+async function listSchemas(id: string | number, args: any): Promise<MCPResponse> {
+  const { page = 0, pageSize = 50 } = args || {};
+  
+  // Query all API documents that are schemas
+  const response = await docClient.send(new QueryCommand({
+    TableName: INDEX_TABLE,
+    KeyConditionExpression: 'PK = :pk',
+    FilterExpression: 'category = :category',
+    ExpressionAttributeValues: {
+      ':pk': 'DOCUMENT',
+      ':category': 'api',
+    },
+  }));
+
+  let schemas = response.Items || [];
+  
+  // Filter to only include schemas
+  schemas = schemas.filter(item => 
+    item.tags && item.tags.includes('schema')
+  );
+
+  // Calculate pagination
+  const totalItems = schemas.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = page * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  
+  // Get the page of results
+  const paginatedSchemas = schemas.slice(startIndex, endIndex);
+  
+  const result = paginatedSchemas.map(item => ({
+    id: item.id,
+    name: item.title,
+    description: item.description || '',
+    tags: item.tags || [],
+  }));
+
+  return {
+    jsonrpc: '2.0',
+    id,
+    result: { 
+      schemas: result,
+      pagination: {
+        page,
+        pageSize,
+        totalPages,
+        totalItems,
+        hasMore: page < totalPages - 1
+      }
+    },
+  };
+}
+
+async function getDocument(id: string | number, args: any): Promise<MCPResponse> {
+  const { documentId } = args || {};
+  
+  if (!documentId) {
+    return createErrorResponse(id, -32602, 'Missing required parameter: documentId');
+  }
+
+  try {
+    // Try to get document metadata from DynamoDB
+    const response = await docClient.send(new GetCommand({
+      TableName: INDEX_TABLE,
+      Key: {
+        PK: 'DOCUMENT',
+        SK: documentId,
+      },
+    }));
+
+    if (!response.Item) {
+      return createErrorResponse(id, -32602, `Document not found: ${documentId}`);
+    }
+
+    // Construct S3 key based on category and document type
+    let s3Key = response.Item.s3Key;
+    if (!s3Key) {
+      // Construct the S3 key based on category and tags
+      const category = response.Item.category;
+      const tags = response.Item.tags || [];
+      
+      if (category === 'guide') {
+        s3Key = `guides/${documentId}.md`;
+      } else if (category === 'api') {
+        if (tags.includes('endpoint')) {
+          s3Key = `api/endpoints/${documentId}.md`;
+        } else if (tags.includes('schema')) {
+          s3Key = `api/schemas/${documentId}.md`;
+        } else {
+          s3Key = `api/${documentId}.md`;
+        }
+      } else if (category === 'reference') {
+        s3Key = `reference/${documentId}.md`;
+      } else {
+        s3Key = `${documentId}.md`;
+      }
+    }
+
+    // Get document content from S3
+    const s3Response = await s3Client.send(new GetObjectCommand({
+      Bucket: DOCS_BUCKET,
+      Key: s3Key,
+    }));
+
+    const content = await streamToString(s3Response.Body as StreamingBlobPayloadInputTypes);
+
+    return {
+      jsonrpc: '2.0',
+      id,
+      result: {
+        document: {
+          id: documentId,
+          title: response.Item.title,
+          category: response.Item.category,
+          tags: response.Item.tags || [],
+          content,
+        },
+      },
+    };
+  } catch (error) {
+    logger.error('Error getting document', { error, documentId });
+    return createErrorResponse(id, -32603, 'Failed to get document');
+  }
+}
+
+async function listGuides(id: string | number, args: any): Promise<MCPResponse> {
+  const { page = 0, pageSize = 50 } = args || {};
+  
+  // Query all guide documents
+  const response = await docClient.send(new QueryCommand({
+    TableName: INDEX_TABLE,
+    KeyConditionExpression: 'PK = :pk',
+    FilterExpression: 'category = :category',
+    ExpressionAttributeValues: {
+      ':pk': 'DOCUMENT',
+      ':category': 'guide',
+    },
+  }));
+
+  const guides = response.Items || [];
+
+  // Calculate pagination
+  const totalItems = guides.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const startIndex = page * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  
+  // Get the page of results
+  const paginatedGuides = guides.slice(startIndex, endIndex);
+  
+  const result = paginatedGuides.map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.description || '',
+    tags: item.tags || [],
+    path: item.path,
+  }));
+
+  return {
+    jsonrpc: '2.0',
+    id,
+    result: { 
+      guides: result,
+      pagination: {
+        page,
+        pageSize,
+        totalPages,
+        totalItems,
+        hasMore: page < totalPages - 1
+      }
+    },
+  };
+}
+
+async function listResources(id: string | number, args: any): Promise<MCPResponse> {
+  const { category = 'all', page = 0, pageSize = 50 } = args || {};
+  
+  try {
+    // Query documents based on category
+    const queryParams: any = {
+      TableName: INDEX_TABLE,
+      KeyConditionExpression: 'PK = :pk',
+      ExpressionAttributeValues: {
+        ':pk': 'DOCUMENT',
+      },
+    };
+
+    if (category !== 'all') {
+      queryParams.FilterExpression = 'category = :category';
+      queryParams.ExpressionAttributeValues[':category'] = category;
+    }
+
+    const response = await docClient.send(new QueryCommand(queryParams));
+    const resources = response.Items || [];
+
+    // Calculate pagination
+    const totalItems = resources.length;
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const startIndex = page * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalItems);
+    
+    // Get the page of results
+    const paginatedResources = resources.slice(startIndex, endIndex);
+    
+    const result = paginatedResources.map(item => ({
+      id: item.id,
+      uri: `voltasis://${item.id}`,
+      title: item.title,
+      category: item.category,
+      description: item.description || item.tags?.join(', ') || '',
+      tags: item.tags || [],
+      mimeType: 'text/markdown',
+    }));
+
+    return {
+      jsonrpc: '2.0',
+      id,
+      result: { 
+        resources: result,
+        pagination: {
+          page,
+          pageSize,
+          totalPages,
+          totalItems,
+          hasMore: page < totalPages - 1
+        }
+      },
+    };
+  } catch (error) {
+    logger.error('Error listing resources', { error });
+    return createErrorResponse(id, -32603, 'Failed to list resources');
+  }
 }
 
 async function handleSamplingCreateMessage(request: MCPRequest): Promise<MCPResponse> {

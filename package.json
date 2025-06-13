@@ -4,6 +4,9 @@
   "description": "Model Context Protocol server for Voltasis API documentation",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "voltasis-mcp-client": "./dist/mcp-aws-client.js"
+  },
   "directories": {
     "doc": "docs"
   },

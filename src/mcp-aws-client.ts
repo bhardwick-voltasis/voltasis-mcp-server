@@ -10,86 +10,49 @@ const endpoint = process.env.MCP_ENDPOINT || process.env.VOLTASIS_MCP_ENDPOINT;
 const apiKey = process.env.VOLTASIS_MCP_API_KEY;
 const DEBUG = process.env.MCP_DEBUG === 'true';
 
-if (!endpoint || !apiKey) {
-  // Exit silently if environment variables are missing
-  process.exit(1);
-}
-
-// Debug logging function
-function debugLog(message: string) {
+// Simple logging function
+function log(message: string, data?: any) {
   if (DEBUG) {
-    fs.appendFileSync('/tmp/mcp-debug.log', `[${new Date().toISOString()}] ${message}\n`);
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] ${message}${data ? ' ' + JSON.stringify(data) : ''}`;
+    fs.appendFileSync('/tmp/mcp-debug.log', logEntry + '\n');
+    console.error(logEntry); // Also log to stderr for real-time monitoring
   }
 }
 
-debugLog('MCP AWS Client started');
-debugLog(`Endpoint: ${endpoint}`);
-debugLog(`API Key: ${apiKey.substring(0, 5)}...`);
+log('MCP Transparent Proxy starting...', {
+  endpoint: endpoint || 'NOT SET',
+  apiKeyPresent: !!apiKey
+});
+
+if (!endpoint || !apiKey) {
+  log('ERROR: Missing required environment variables');
+  process.exit(1);
+}
 
 // Parse the endpoint URL
 const url = new URL(endpoint);
 const mcpPath = url.pathname + '/mcp';
 
-// Queue to maintain message order
-const responseQueue: Map<number, any> = new Map();
-let lastSentId = -1; // Start at -1 to handle id:0
-
-// Function to send queued responses in order
-function sendQueuedResponses() {
-  while (responseQueue.has(lastSentId + 1)) {
-    lastSentId++;
-    const response = responseQueue.get(lastSentId);
-    responseQueue.delete(lastSentId);
-    debugLog(`Sending response: ${JSON.stringify(response)}`);
-    process.stdout.write(JSON.stringify(response) + '\n');
-  }
-}
-
-// Set up stdio interface
+// Simple transparent proxy - just forward messages
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout,
   terminal: false
 });
 
-// Forward requests from stdio to HTTPS
-rl.on('line', async (line) => {
+rl.on('line', (line) => {
   try {
     const message = JSON.parse(line);
-    debugLog(`Received message: ${JSON.stringify(message)}`);
+    log(`>>> Request from Cursor: ${message.method}`, { id: message.id });
     
-    // Handle notifications locally - they don't need responses
+    // Handle notifications locally - they don't expect responses
     if (message.method && message.method.startsWith('notifications/')) {
-      // Notifications don't get responses in MCP protocol
+      log('Notification handled locally (no response needed)');
       return;
     }
     
-    // Handle initialized method (Cursor sends this after initialize)
-    if (message.method === 'initialized') {
-      // This is a notification-like method that expects a response
-      const response = {
-        jsonrpc: '2.0',
-        id: message.id,
-        result: {}
-      };
-      responseQueue.set(message.id, response);
-      sendQueuedResponses();
-      return;
-    }
-    
-    // Handle ping/keepalive locally
-    if (message.method === 'ping') {
-      const response = {
-        jsonrpc: '2.0',
-        id: message.id,
-        result: { pong: true }
-      };
-      responseQueue.set(message.id, response);
-      sendQueuedResponses();
-      return;
-    }
-    
-    // Send to AWS Lambda via API Gateway
+    // Forward to Lambda
+    const data = JSON.stringify(message);
     const options = {
       hostname: url.hostname,
       port: 443,
@@ -98,10 +61,9 @@ rl.on('line', async (line) => {
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': apiKey,
-      },
+        'Content-Length': Buffer.byteLength(data)
+      }
     };
-
-    const data = JSON.stringify(message);
     
     const req = https.request(options, (res) => {
       let body = '';
@@ -111,71 +73,86 @@ rl.on('line', async (line) => {
       });
       
       res.on('end', () => {
+        log(`<<< Response from Lambda: ${res.statusCode}`, { 
+          size: body.length,
+          id: message.id 
+        });
+        
+        // Forward response directly to Cursor
         try {
-          const response = JSON.parse(body);
+          // Validate it's valid JSON
+          const parsed = JSON.parse(body);
           
-          // Check for protocol version mismatch
-          if (message.method === 'initialize' && response.result) {
-            const clientVersion = message.params?.protocolVersion;
-            const serverVersion = response.result.protocolVersion;
-            if (clientVersion !== serverVersion) {
-              debugLog(`Protocol version mismatch: Client=${clientVersion}, Server=${serverVersion}`);
+          // Log exactly what we're sending
+          log('Response content:', {
+            id: message.id,
+            bodyLength: body.length,
+            firstChars: body.substring(0, 100),
+            lastChars: body.substring(body.length - 50),
+            hasNewline: body.includes('\n'),
+            parsed: JSON.stringify(parsed).substring(0, 200)
+          });
+          
+          // Send it directly to stdout
+          process.stdout.write(body + '\n');
+          
+          // Verify it was written
+          log('Response written to stdout', { 
+            id: message.id,
+            bytesWritten: body.length + 1 // +1 for newline
+          });
+        } catch (e) {
+          const error = e instanceof Error ? e.message : String(e);
+          log('ERROR: Invalid JSON from Lambda', { error, body: body.substring(0, 200) });
+          // Send error response
+          const errorResponse = {
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32603,
+              message: 'Invalid response from server',
+              data: { parseError: error }
             }
-          }
-          
-          // Add to queue and send in order
-          responseQueue.set(message.id, response);
-          sendQueuedResponses();
-        } catch (error) {
-          // Silently handle errors - don't write to stderr
-          debugLog(`Error parsing response: ${error}`);
+          };
+          process.stdout.write(JSON.stringify(errorResponse) + '\n');
         }
       });
     });
     
-    req.on('error', (error) => {
-      // Send error response without logging to stderr
+    req.on('error', (error: NodeJS.ErrnoException) => {
+      log('ERROR: HTTPS request failed', { error: error.message });
+      // Send error response
       const errorResponse = {
         jsonrpc: '2.0',
         id: message.id,
         error: {
           code: -32603,
-          message: 'Internal error',
+          message: 'Network error',
           data: error.message
         }
       };
-      responseQueue.set(message.id, errorResponse);
-      sendQueuedResponses();
+      process.stdout.write(JSON.stringify(errorResponse) + '\n');
     });
     
     req.write(data);
     req.end();
     
-  } catch (error) {
-    // Silently handle errors - don't write to stderr
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    log('ERROR: Failed to parse message from Cursor', { error });
   }
 });
 
-// Keep process alive
+// Keep the process alive
 process.stdin.resume();
 
-// Handle readline close - only exit if explicitly closed, not on EOF
-rl.on('close', () => {
-  debugLog('Readline closed');
-  // Don't exit immediately - wait for SIGTERM or SIGINT
-});
-
-// Handle process termination
+// Clean shutdown
 process.on('SIGINT', () => {
-  debugLog('Received SIGINT');
+  log('Shutting down...');
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  debugLog('Received SIGTERM');
+  log('Shutting down...');
   process.exit(0);
-});
-
-process.on('exit', (code) => {
-  debugLog(`Process exiting with code ${code}`);
 }); 
