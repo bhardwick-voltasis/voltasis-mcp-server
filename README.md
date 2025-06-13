@@ -168,6 +168,21 @@ Documentation is stored in S3 and served via CloudFront. To update documentation
    npm run aws:upload-docs dev
    ```
 
+### Syncing with OpenAPI Documentation
+
+The MCP server can automatically sync with Voltasis API OpenAPI documentation:
+
+1. **Quick Sync** (from voltasis-api directory):
+   ```bash
+   ./scripts/openapi-build-deploy-with-mcp.sh dev none false true
+   ```
+
+2. **Full Setup Guide**: See [OpenAPI Sync Setup Guide](docs/openapi-sync-setup.md)
+
+3. **Integration Details**: See [OpenAPI MCP Integration](docs/openapi-mcp-integration.md)
+
+This converts OpenAPI specs to MCP-friendly markdown, generating 197+ endpoint documents and 64+ schema documents automatically.
+
 ### Adding New Endpoints
 
 Use the helper script to quickly add new endpoint documentation:
@@ -340,6 +355,13 @@ For issues and questions:
 - Contact the Voltasis development team
 
 ## Recent Updates
+
+### OpenAPI to MCP Synchronization (June 2024)
+- Automatic conversion of OpenAPI specifications to MCP documentation
+- Generates 197+ endpoint documents and 64+ schema documents
+- Three integration methods: script-based, GitHub Actions, and webhooks
+- See [OpenAPI Sync Setup Guide](docs/openapi-sync-setup.md) for detailed instructions
+- Run `./scripts/openapi-build-deploy-with-mcp.sh` from voltasis-api directory
 
 ### Real-Time Documentation Updates (December 2024)
 - Implemented webhook integration for automatic documentation updates
