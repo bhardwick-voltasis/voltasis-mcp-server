@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-06-13T13:06:59.609Z",
+  "totalDocuments": 2,
+  "categories": {
+    "api": [
+      {
+        "id": "api-users-list",
+        "title": "List Users",
+        "path": "api/endpoints/users.md",
+        "tags": [
+          "users",
+          "organization",
+          "multi-tenant"
+        ]
+      },
+      {
+        "id": "api-overview",
+        "title": "Voltasis API Overview",
+        "path": "api/overview.md",
+        "tags": [
+          "overview",
+          "getting-started",
+          "api"
+        ]
+      }
+    ],
+    "guides": [],
+    "reference": []
+  },
+  "searchIndex": [
+    {
+      "id": "api-users-list",
+      "title": "List Users",
+      "content": "# List Users  ## Quick Reference - **Method**: GET - **Path**: /api/v1/users - **Authentication**: Required - **Organization Context**: Required  ## Description  Retrieve a paginated list of users within the authenticated user's organization. This endpoint supports filtering, sorting, and pagination to efficiently manage large user lists.  ## Request  ### Headers ```json {   \"Authorization\": \"Bearer {token}\",   \"Content-Type\": \"application/json\" } ```  ### Query Parameters | Name | Type | Requir",
+      "category": "api",
+      "tags": [
+        "users",
+        "organization",
+        "multi-tenant"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "api-overview",
+      "title": "Voltasis API Overview",
+      "content": "# Voltasis API Overview  ## Introduction  The Voltasis API provides programmatic access to time tracking and project management functionality. This RESTful API enables you to integrate Voltasis with your own applications and automate workflows.  ## Base URL  All API requests should be made to:  ``` https://api.voltasis.com/v1 ```  ## Authentication  All API requests require authentication using Bearer tokens. Include your API token in the Authorization header:  ``` Authorization: Bearer YOUR_API",
+      "category": "api",
+      "tags": [
+        "overview",
+        "getting-started",
+        "api"
+      ],
+      "weight": 1.5
+    }
+  ]
+}
