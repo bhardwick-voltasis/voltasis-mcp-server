@@ -48,6 +48,13 @@ export const mcpLambdaConfigs: Record<string, LambdaConfig> = {
     timeout: 30,
     description: 'Validates markdown document structure',
   },
+
+  // Webhook Handler for CI/CD Integration
+  'mcp-webhook-handler': {
+    memory: 512,
+    timeout: 60,
+    description: 'Processes webhooks from CI/CD pipeline for real-time documentation updates',
+  },
 };
 
 /**

@@ -341,6 +341,13 @@ For issues and questions:
 
 ## Recent Updates
 
+### Real-Time Documentation Updates (December 2024)
+- Implemented webhook integration for automatic documentation updates
+- Added GitHub Actions workflow for CI/CD pipeline integration
+- Documentation changes are now deployed automatically on push
+- CloudFront cache invalidation ensures immediate availability
+- See [Webhook Integration Documentation](docs/webhook-integration.md) for setup details
+
 ### Protocol Version Compatibility (June 2025)
 - Fixed protocol version mismatch issues with Cursor IDE
 - Added automatic protocol version negotiation
@@ -361,9 +368,9 @@ For issues and questions:
 - [x] DynamoDB search indexes ✅
 - [x] Protocol version negotiation ✅
 - [x] Prompts support ✅
+- [x] Real-time documentation updates via webhooks ✅
+- [x] Integration with Voltasis CI/CD pipeline ✅
 - [ ] Advanced semantic search using embeddings
-- [ ] Real-time documentation updates via webhooks
-- [ ] Integration with Voltasis CI/CD pipeline
 - [ ] Support for multiple API versions
 - [ ] GraphQL schema support
 - [ ] Monitoring dashboard with CloudWatch 

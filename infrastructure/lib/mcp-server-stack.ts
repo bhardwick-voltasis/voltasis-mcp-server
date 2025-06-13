@@ -338,6 +338,78 @@ export class VoltasisMCPServerStack extends cdk.Stack {
     this.docsBucket.grantRead(indexBuilderFunction);
     this.indexTable.grantWriteData(indexBuilderFunction);
 
+    // Webhook Handler Lambda for CI/CD Integration
+    const webhookHandlerConfig = getMCPLambdaConfig('mcp-webhook-handler');
+    const webhookHandlerFunction = new lambdaNodejs.NodejsFunction(this, 'WebhookHandlerFunction', {
+      functionName: `voltasis-mcp-webhook-handler-${stage}`,
+      entry: 'lambda/webhook-handler/handler.ts',
+      handler: 'handler',
+      runtime: lambda.Runtime.NODEJS_20_X,
+      architecture: lambda.Architecture.ARM_64,
+      timeout: cdk.Duration.seconds(webhookHandlerConfig.timeout),
+      memorySize: webhookHandlerConfig.memory,
+      role: lambdaRole,
+      environment: {
+        STAGE: stage,
+        DOCS_BUCKET: this.docsBucket.bucketName,
+        INDEX_TABLE: this.indexTable.tableName,
+        CLOUDFRONT_DISTRIBUTION_ID: this.distribution.distributionId,
+        WEBHOOK_SECRET: process.env.WEBHOOK_SECRET || 'default-webhook-secret',
+        GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
+      },
+      bundling: {
+        minify: stage === 'prod',
+        sourceMap: true,
+        target: 'es2020',
+        externalModules: [
+          '@aws-sdk/client-dynamodb',
+          '@aws-sdk/client-s3',
+          '@aws-sdk/lib-dynamodb',
+          '@aws-sdk/client-cloudfront',
+        ],
+      },
+      description: webhookHandlerConfig.description,
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      tracing: lambda.Tracing.ACTIVE,
+    });
+
+    // Grant permissions to webhook handler
+    this.docsBucket.grantReadWrite(webhookHandlerFunction);
+    this.indexTable.grantReadWriteData(webhookHandlerFunction);
+
+    // Add CloudFront invalidation permissions
+    webhookHandlerFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['cloudfront:CreateInvalidation'],
+      resources: [`arn:aws:cloudfront::*:distribution/${this.distribution.distributionId}`],
+    }));
+
+    // Webhook endpoints
+    const webhookResource = this.api.root.addResource('webhook');
+    
+    // GitHub webhook endpoint (no API key required for webhooks)
+    webhookResource.addMethod('POST', new apigateway.LambdaIntegration(webhookHandlerFunction, {
+      proxy: true,
+      integrationResponses: [
+        {
+          statusCode: '200',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': "'*'",
+          },
+        },
+      ],
+    }), {
+      apiKeyRequired: false, // Webhooks use signature verification instead
+      methodResponses: [
+        {
+          statusCode: '200',
+          responseParameters: {
+            'method.response.header.Access-Control-Allow-Origin': true,
+          },
+        },
+      ],
+    });
+
     // CloudFormation Outputs
     new cdk.CfnOutput(this, 'MCPApiUrl', {
       value: this.api.url,
@@ -373,6 +445,12 @@ export class VoltasisMCPServerStack extends cdk.Stack {
       value: this.indexTable.tableName,
       description: 'DynamoDB table for document indexes',
       exportName: `MCPIndexTableName-${stage}`,
+    });
+
+    new cdk.CfnOutput(this, 'MCPWebhookUrl', {
+      value: `${this.api.url}webhook`,
+      description: 'Webhook URL for CI/CD integration',
+      exportName: `MCPWebhookUrl-${stage}`,
     });
   }
 } 

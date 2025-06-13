@@ -1,0 +1,234 @@
+name: Documentation Update
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'mcp-docs/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs/**'
+      - '*.md'
+      - 'mcp-docs/**'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      rebuild_all:
+        description: 'Rebuild all documentation'
+        required: false
+        default: 'false'
+
+env:
+  AWS_REGION: us-east-1
+  NODE_VERSION: '20.x'
+
+jobs:
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate markdown files
+        run: |
+          # Install markdown linter
+          npm install -g markdownlint-cli
+          
+          # Lint all markdown files
+          markdownlint '**/*.md' --ignore node_modules --ignore dist
+
+      - name: Check for broken links
+        run: |
+          # Install link checker
+          npm install -g markdown-link-check
+          
+          # Check all markdown files for broken links
+          find . -name "*.md" -not -path "./node_modules/*" -not -path "./dist/*" | xargs -I {} markdown-link-check {}
+
+  build-docs:
+    name: Build Documentation
+    needs: validate-docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build documentation index
+        run: npm run build-index
+
+      - name: Generate API documentation
+        run: |
+          # Generate TypeScript API documentation
+          npx typedoc --out docs/api src --excludePrivate --excludeInternal
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation
+          path: |
+            docs/
+            mcp-docs/
+            dist/
+
+  trigger-webhook:
+    name: Trigger Documentation Update Webhook
+    needs: build-docs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'release'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare webhook payload
+        id: webhook-payload
+        run: |
+          # Determine the environment based on branch
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            STAGE="prod"
+          elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            STAGE="staging"
+          else
+            STAGE="dev"
+          fi
+          
+          # Get webhook URL from AWS outputs
+          WEBHOOK_URL=$(aws cloudformation describe-stacks \
+            --stack-name "VoltasisMCPServerStack-${STAGE}" \
+            --query "Stacks[0].Outputs[?OutputKey=='MCPWebhookUrl'].OutputValue" \
+            --output text)
+          
+          echo "webhook_url=${WEBHOOK_URL}" >> $GITHUB_OUTPUT
+          echo "stage=${STAGE}" >> $GITHUB_OUTPUT
+
+      - name: Send webhook notification
+        env:
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          # Prepare the payload
+          PAYLOAD=$(cat <<EOF
+          {
+            "event": "${{ github.event_name }}",
+            "repository": {
+              "name": "${{ github.event.repository.name }}",
+              "full_name": "${{ github.event.repository.full_name }}",
+              "default_branch": "${{ github.event.repository.default_branch }}"
+            },
+            "ref": "${{ github.ref }}",
+            "commits": ${{ toJson(github.event.commits) }},
+            "release": ${{ github.event_name == 'release' && toJson(github.event.release) || 'null' }},
+            "workflow_run": {
+              "name": "Build Documentation",
+              "conclusion": "success",
+              "status": "completed"
+            }
+          }
+          EOF
+          )
+          
+          # Calculate signature
+          SIGNATURE="sha256=$(echo -n "${PAYLOAD}" | openssl dgst -sha256 -hmac "${WEBHOOK_SECRET}" | cut -d' ' -f2)"
+          
+          # Send webhook
+          curl -X POST "${{ steps.webhook-payload.outputs.webhook_url }}" \
+            -H "Content-Type: application/json" \
+            -H "X-Hub-Signature-256: ${SIGNATURE}" \
+            -H "X-GitHub-Event: ${{ github.event_name }}" \
+            -d "${PAYLOAD}"
+
+  deploy-docs:
+    name: Deploy Documentation
+    needs: trigger-webhook
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download documentation artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: documentation
+
+      - name: Deploy to S3
+        run: |
+          # Determine the environment
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            STAGE="prod"
+          else
+            STAGE="staging"
+          fi
+          
+          # Get S3 bucket name from CloudFormation outputs
+          BUCKET_NAME=$(aws cloudformation describe-stacks \
+            --stack-name "VoltasisMCPServerStack-${STAGE}" \
+            --query "Stacks[0].Outputs[?OutputKey=='MCPDocsBucketName'].OutputValue" \
+            --output text)
+          
+          # Sync documentation to S3
+          aws s3 sync docs/ "s3://${BUCKET_NAME}/docs/" --delete
+          aws s3 sync mcp-docs/ "s3://${BUCKET_NAME}/mcp-docs/" --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          # Determine the environment
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            STAGE="prod"
+          else
+            STAGE="staging"
+          fi
+          
+          # Get CloudFront distribution ID
+          DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
+            --stack-name "VoltasisMCPServerStack-${STAGE}" \
+            --query "Stacks[0].Outputs[?OutputKey=='MCPCloudFrontDistributionId'].OutputValue" \
+            --output text)
+          
+          # Create invalidation
+          aws cloudfront create-invalidation \
+            --distribution-id "${DISTRIBUTION_ID}" \
+            --paths "/*"
+
+  notify-completion:
+    name: Notify Completion
+    needs: [deploy-docs]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send notification
+        run: |
+          # Send notification to Slack/Discord/etc
+          echo "Documentation update completed with status: ${{ job.status }}" 

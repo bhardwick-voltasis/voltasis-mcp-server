@@ -22,7 +22,8 @@
     "aws:deploy:staging": "./scripts/deploy-mcp-aws.sh staging",
     "aws:deploy:prod": "./scripts/deploy-mcp-aws.sh prod",
     "aws:upload-docs": "./scripts/upload-docs.sh",
-    "aws:configure": "tsx scripts/configure-cursor-aws.ts"
+    "aws:configure": "tsx scripts/configure-cursor-aws.ts",
+    "webhook:setup": "tsx scripts/setup-webhook.ts"
   },
   "keywords": [
     "mcp",
