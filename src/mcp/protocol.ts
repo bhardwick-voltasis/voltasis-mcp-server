@@ -16,7 +16,7 @@ import { createLogger } from '../utils/logger.js';
 const logger = createLogger('mcp-protocol');
 
 export class MCPProtocolHandler {
-  private protocolVersion = '2024-11-05';
+  private protocolVersion = '2025-03-26';
   private serverName = 'Voltasis API Documentation Server';
   private serverVersion = '1.0.0';
   private documentManager: DocumentManager;

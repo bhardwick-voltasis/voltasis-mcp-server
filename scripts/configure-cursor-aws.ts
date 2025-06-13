@@ -71,7 +71,7 @@ const mcpConfig = {
     'voltasis-api-aws': {
       command: 'node',
       args: [
-        path.join(process.cwd(), 'dist', 'mcp-client.js')
+        path.join(process.cwd(), 'dist', 'mcp-aws-client.js')
       ],
       env: {
         MCP_ENDPOINT: envConfig.MCP_ENDPOINT.replace('/mcp', ''), // Remove /mcp suffix

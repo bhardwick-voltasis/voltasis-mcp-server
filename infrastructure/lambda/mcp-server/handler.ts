@@ -129,7 +129,7 @@ async function handleInitialize(request: MCPRequest): Promise<MCPResponse> {
     jsonrpc: '2.0',
     id: request.id,
     result: {
-      protocolVersion: '2024-11-05',
+      protocolVersion: '2025-03-26',
       capabilities: {
         tools: {},
         resources: {},
