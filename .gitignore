@@ -69,4 +69,15 @@ mcp-docs-cache/
 .aws/config
 
 # Jest config is needed
-!jest.config.js 
+!jest.config.js
+
+# MCP generated API documentation
+# These files are auto-generated from OpenAPI specs
+# Run ./scripts/openapi-build-deploy-with-mcp.sh from voltasis-api to regenerate
+mcp-docs/api/endpoints/
+mcp-docs/api/schemas/
+mcp-docs/api/overview.md
+
+# Keep the manually created guides
+!mcp-docs/guides/
+!mcp-docs/reference/ 
