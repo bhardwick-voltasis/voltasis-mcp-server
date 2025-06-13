@@ -11,6 +11,14 @@ dist/
 # Exclude TypeScript build files except in scripts
 !scripts/**/*.js
 
+# Infrastructure build outputs
+infrastructure/dist/
+infrastructure/cdk.out/
+infrastructure/*.js
+infrastructure/*.d.ts
+infrastructure/*.js.map
+infrastructure/outputs-*.json
+
 # Environment files
 .env
 .env.local
@@ -38,13 +46,6 @@ Thumbs.db
 *.swo
 *~
 
-# AWS CDK
-infrastructure/cdk.out/
-infrastructure/*.js
-infrastructure/*.d.ts
-infrastructure/*.js.map
-infrastructure/outputs-*.json
-
 # Test coverage
 coverage/
 .nyc_output/
@@ -53,6 +54,7 @@ coverage/
 tmp/
 temp/
 *.tmp
+CLEANUP_SUMMARY.md
 
 # MCP cache
 .mcp-cache/
@@ -64,4 +66,7 @@ mcp-docs-cache/
 
 # AWS credentials
 .aws/credentials
-.aws/config 
+.aws/config
+
+# Jest config is needed
+!jest.config.js 

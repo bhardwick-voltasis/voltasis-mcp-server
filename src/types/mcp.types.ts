@@ -39,6 +39,7 @@ export interface InitializeResponse {
   capabilities: {
     tools?: Record<string, any>;
     resources?: Record<string, any>;
+    prompts?: Record<string, any>;
   };
   serverInfo: {
     name: string;

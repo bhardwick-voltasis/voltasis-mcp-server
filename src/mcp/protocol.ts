@@ -16,7 +16,7 @@ import { createLogger } from '../utils/logger.js';
 const logger = createLogger('mcp-protocol');
 
 export class MCPProtocolHandler {
-  private protocolVersion = '2025-03-26';
+  private protocolVersion = '2024-11-05';
   private serverName = 'Voltasis API Documentation Server';
   private serverVersion = '1.0.0';
   private documentManager: DocumentManager;
@@ -57,6 +57,18 @@ export class MCPProtocolHandler {
             await this.handleToolsList(request as ToolsListRequest)
           );
 
+        case 'prompts/list':
+          return this.createResponse(
+            request.id,
+            await this.handlePromptsList(request)
+          );
+
+        case 'prompts/get':
+          return this.createResponse(
+            request.id,
+            await this.handlePromptsGet(request)
+          );
+
         case 'resources/list':
           return this.createResponse(
             request.id,
@@ -73,6 +85,12 @@ export class MCPProtocolHandler {
           return this.createResponse(
             request.id,
             await this.handleToolCall(request as ToolCallRequest)
+          );
+
+        case 'sampling/createMessage':
+          return this.createResponse(
+            request.id,
+            await this.handleSamplingCreateMessage(request)
           );
 
         default:
@@ -107,8 +125,16 @@ export class MCPProtocolHandler {
     return {
       protocolVersion: clientProtocolVersion,
       capabilities: {
-        tools: {},
-        resources: {}
+        tools: {
+          listChanged: false // Set to true if you plan to support dynamic tool updates
+        },
+        resources: {
+          subscribe: false, // Set to true if you plan to support resource subscriptions
+          listChanged: false // Set to true if resources can change dynamically
+        },
+        prompts: {
+          listChanged: false // Set to true if prompts can change dynamically
+        }
       },
       serverInfo: {
         name: this.serverName,
@@ -196,6 +222,122 @@ export class MCPProtocolHandler {
     ];
 
     return { tools };
+  }
+
+  private async handlePromptsList(_request: MCPRequest): Promise<{ prompts: any[] }> {
+    const prompts = [
+      {
+        name: 'create_time_entry',
+        description: 'Template for creating a new time entry in Voltasis',
+        arguments: [
+          {
+            name: 'project_name',
+            description: 'The name of the project',
+            required: true,
+          },
+          {
+            name: 'duration_hours',
+            description: 'Duration in hours',
+            required: true,
+          },
+          {
+            name: 'description',
+            description: 'Description of the work done',
+            required: false,
+          },
+        ],
+      },
+      {
+        name: 'api_integration_guide',
+        description: 'Step-by-step guide for integrating with Voltasis API',
+        arguments: [
+          {
+            name: 'integration_type',
+            description: 'Type of integration (webhook, polling, real-time)',
+            required: true,
+          },
+          {
+            name: 'programming_language',
+            description: 'Programming language for code examples',
+            required: false,
+          },
+        ],
+      },
+      {
+        name: 'debug_api_error',
+        description: 'Template for debugging common API errors',
+        arguments: [
+          {
+            name: 'error_code',
+            description: 'The HTTP error code received',
+            required: true,
+          },
+          {
+            name: 'endpoint',
+            description: 'The API endpoint that returned the error',
+            required: true,
+          },
+        ],
+      },
+    ];
+
+    return { prompts };
+  }
+
+  private async handlePromptsGet(request: MCPRequest): Promise<any> {
+    const { name, arguments: args } = request.params || {};
+    
+    if (!name) {
+      throw this.createError(-32602, 'Missing required parameter: name');
+    }
+
+    logger.debug('Getting prompt', { prompt: name, arguments: args });
+
+    // For local implementation, return simpler prompt templates
+    const promptTemplates: Record<string, (args: any) => any> = {
+      create_time_entry: (args) => ({
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Create a time entry for project "${args.project_name}" with duration ${args.duration_hours} hours.${args.description ? ` Description: ${args.description}` : ''}`
+            }
+          }
+        ]
+      }),
+      
+      api_integration_guide: (args) => ({
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Provide a ${args.integration_type} integration guide for Voltasis API${args.programming_language ? ` using ${args.programming_language}` : ''}.`
+            }
+          }
+        ]
+      }),
+      
+      debug_api_error: (args) => ({
+        messages: [
+          {
+            role: 'user',
+            content: {
+              type: 'text',
+              text: `Help debug a ${args.error_code} error when calling ${args.endpoint} endpoint.`
+            }
+          }
+        ]
+      })
+    };
+
+    const promptTemplate = promptTemplates[name];
+    if (!promptTemplate) {
+      throw this.createError(-32602, `Unknown prompt: ${name}`);
+    }
+
+    return promptTemplate(args || {});
   }
 
   private async handleResourcesList(_request: ResourceListRequest): Promise<{ resources: Resource[] }> {
@@ -311,6 +453,28 @@ export class MCPProtocolHandler {
         content: `// Schema for ${schemaName} will be loaded here`
       }
     };
+  }
+
+  private async handleSamplingCreateMessage(request: MCPRequest): Promise<any> {
+    const { messages, modelPreferences, includeContext, metadata } = request.params || {};
+    
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      throw this.createError(-32602, 'Missing required parameter: messages');
+    }
+
+    logger.debug('Sampling request received', { 
+      messageCount: messages.length,
+      includeContext,
+      modelPreferences,
+      metadata 
+    });
+
+    // For local implementation, sampling is not supported
+    // This would require integration with the host's LLM
+    throw this.createError(
+      -32601, 
+      'Sampling is not supported by this server. Sampling requires client-side LLM access.'
+    );
   }
 
   private createResponse(id: string | number, result: any): MCPResponse {

@@ -69,6 +69,14 @@ const lambdaHandler = async (
         response = await handleToolsList(request);
         break;
         
+      case 'prompts/list':
+        response = await handlePromptsList(request);
+        break;
+        
+      case 'prompts/get':
+        response = await handlePromptsGet(request);
+        break;
+        
       case 'resources/list':
         response = await handleResourcesList(request);
         break;
@@ -79,6 +87,10 @@ const lambdaHandler = async (
         
       case 'tools/call':
         response = await handleToolCall(request);
+        break;
+        
+      case 'sampling/createMessage':
+        response = await handleSamplingCreateMessage(request);
         break;
         
       default:
@@ -125,14 +137,30 @@ const lambdaHandler = async (
 };
 
 async function handleInitialize(request: MCPRequest): Promise<MCPResponse> {
+  // Support protocol version negotiation for backward compatibility
+  const clientProtocolVersion = request.params?.protocolVersion || '2024-11-05';
+  
+  logger.info('MCP initialization', { 
+    clientProtocolVersion,
+    clientInfo: request.params?.clientInfo 
+  });
+  
   return {
     jsonrpc: '2.0',
     id: request.id,
     result: {
-      protocolVersion: '2025-03-26',
+      protocolVersion: clientProtocolVersion,
       capabilities: {
-        tools: {},
-        resources: {},
+        tools: {
+          listChanged: false // Set to true if you plan to support dynamic tool updates
+        },
+        resources: {
+          subscribe: false, // Set to true if you plan to support resource subscriptions
+          listChanged: false // Set to true if resources can change dynamically
+        },
+        prompts: {
+          listChanged: false // Set to true if prompts can change dynamically
+        }
       },
       serverInfo: {
         name: 'Voltasis API Documentation Server',
@@ -228,6 +256,254 @@ async function handleToolsList(request: MCPRequest): Promise<MCPResponse> {
     id: request.id,
     result: { tools },
   };
+}
+
+async function handlePromptsList(request: MCPRequest): Promise<MCPResponse> {
+  const prompts = [
+    {
+      name: 'create_time_entry',
+      description: 'Template for creating a new time entry in Voltasis',
+      arguments: [
+        {
+          name: 'project_name',
+          description: 'The name of the project',
+          required: true,
+        },
+        {
+          name: 'duration_hours',
+          description: 'Duration in hours',
+          required: true,
+        },
+        {
+          name: 'description',
+          description: 'Description of the work done',
+          required: false,
+        },
+      ],
+    },
+    {
+      name: 'api_integration_guide',
+      description: 'Step-by-step guide for integrating with Voltasis API',
+      arguments: [
+        {
+          name: 'integration_type',
+          description: 'Type of integration (webhook, polling, real-time)',
+          required: true,
+        },
+        {
+          name: 'programming_language',
+          description: 'Programming language for code examples',
+          required: false,
+        },
+      ],
+    },
+    {
+      name: 'debug_api_error',
+      description: 'Template for debugging common API errors',
+      arguments: [
+        {
+          name: 'error_code',
+          description: 'The HTTP error code received',
+          required: true,
+        },
+        {
+          name: 'endpoint',
+          description: 'The API endpoint that returned the error',
+          required: true,
+        },
+      ],
+    },
+  ];
+
+  return {
+    jsonrpc: '2.0',
+    id: request.id,
+    result: { prompts },
+  };
+}
+
+async function handlePromptsGet(request: MCPRequest): Promise<MCPResponse> {
+  const { name, arguments: args } = request.params || {};
+  
+  if (!name) {
+    return createErrorResponse(request.id, -32602, 'Missing required parameter: name');
+  }
+
+  logger.info('Getting prompt', { prompt: name, arguments: args });
+
+  // Define prompt templates
+  const promptTemplates: Record<string, (args: any) => any> = {
+    create_time_entry: (args) => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `I need to create a time entry for the project "${args.project_name}" with a duration of ${args.duration_hours} hours.${args.description ? ` The work description is: ${args.description}` : ''}`
+          }
+        },
+        {
+          role: 'assistant',
+          content: {
+            type: 'text',
+            text: `I'll help you create a time entry for the ${args.project_name} project. Here's the API call you need to make:
+
+\`\`\`bash
+curl -X POST https://api.voltasis.com/v1/time-entries \\
+  -H "Authorization: Bearer YOUR_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "project_id": "PROJECT_ID",
+    "duration": ${args.duration_hours * 3600},
+    "description": "${args.description || `Work on ${args.project_name}`}",
+    "date": "${new Date().toISOString().split('T')[0]}"
+  }'
+\`\`\`
+
+Make sure to replace PROJECT_ID with the actual project ID. You can find it by listing projects first.`
+          }
+        }
+      ]
+    }),
+    
+    api_integration_guide: (args) => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `I need a guide for ${args.integration_type} integration with Voltasis API${args.programming_language ? ` using ${args.programming_language}` : ''}.`
+          }
+        },
+        {
+          role: 'assistant',
+          content: {
+            type: 'text',
+            text: `Here's a comprehensive guide for ${args.integration_type} integration with Voltasis API${args.programming_language ? ` in ${args.programming_language}` : ''}:
+
+## ${args.integration_type.charAt(0).toUpperCase() + args.integration_type.slice(1)} Integration Guide
+
+### 1. Authentication
+First, obtain your API token from your Voltasis account settings.
+
+### 2. ${args.integration_type === 'webhook' ? 'Webhook Setup' : args.integration_type === 'polling' ? 'Polling Implementation' : 'Real-time Connection'}
+
+${args.integration_type === 'webhook' ? `Configure your webhook endpoint in Voltasis:
+- Go to Settings > Webhooks
+- Add your endpoint URL
+- Select events to subscribe to
+- Verify the webhook signature for security` : 
+args.integration_type === 'polling' ? `Implement a polling mechanism:
+- Query the API at regular intervals
+- Use the \`updated_since\` parameter for efficiency
+- Implement exponential backoff for rate limiting` :
+`Set up WebSocket connection:
+- Connect to wss://api.voltasis.com/v1/stream
+- Authenticate with your API token
+- Subscribe to relevant events`}
+
+### 3. Error Handling
+Implement robust error handling for:
+- Network failures
+- Rate limiting (429 errors)
+- Invalid responses
+- Authentication failures
+
+### 4. Best Practices
+- Always use HTTPS
+- Implement request retries with backoff
+- Log all API interactions for debugging
+- Monitor your API usage`
+          }
+        }
+      ]
+    }),
+    
+    debug_api_error: (args) => ({
+      messages: [
+        {
+          role: 'user',
+          content: {
+            type: 'text',
+            text: `I'm getting a ${args.error_code} error when calling ${args.endpoint}. How do I debug this?`
+          }
+        },
+        {
+          role: 'assistant',
+          content: {
+            type: 'text',
+            text: `Let's debug the ${args.error_code} error on ${args.endpoint}:
+
+## Error Analysis
+
+${args.error_code === '401' ? `### 401 Unauthorized
+This indicates an authentication problem:
+1. Check your API token is valid and not expired
+2. Ensure the Authorization header is properly formatted: \`Bearer YOUR_TOKEN\`
+3. Verify the token has the necessary permissions for this endpoint` :
+args.error_code === '403' ? `### 403 Forbidden
+You're authenticated but lack permission:
+1. Check your account permissions
+2. Verify you have access to the requested resource
+3. Ensure you're using the correct organization context` :
+args.error_code === '404' ? `### 404 Not Found
+The resource doesn't exist:
+1. Verify the endpoint URL is correct
+2. Check if the resource ID exists
+3. Ensure you're using the correct API version` :
+args.error_code === '429' ? `### 429 Too Many Requests
+You've hit the rate limit:
+1. Check the Retry-After header for when to retry
+2. Implement exponential backoff
+3. Consider caching responses to reduce API calls` :
+args.error_code === '500' ? `### 500 Internal Server Error
+Server-side issue:
+1. Check the Voltasis status page
+2. Retry with exponential backoff
+3. Contact support if the issue persists` :
+`### ${args.error_code} Error
+General debugging steps:
+1. Check the response body for error details
+2. Verify request headers and body format
+3. Test with minimal parameters first`}
+
+## Debugging Steps
+
+1. **Enable verbose logging** to see the full request/response
+2. **Test with curl** to isolate the issue:
+   \`\`\`bash
+   curl -v -X GET ${args.endpoint} \\
+     -H "Authorization: Bearer YOUR_TOKEN"
+   \`\`\`
+3. **Check the API documentation** for this endpoint
+4. **Use the API explorer** in your Voltasis dashboard
+
+## Need More Help?
+- Check the error details in the response body
+- Review the API documentation for ${args.endpoint}
+- Contact support with your request ID`
+          }
+        }
+      ]
+    })
+  };
+
+  const promptTemplate = promptTemplates[name];
+  if (!promptTemplate) {
+    return createErrorResponse(request.id, -32602, `Unknown prompt: ${name}`);
+  }
+
+  try {
+    const prompt = promptTemplate(args || {});
+    return {
+      jsonrpc: '2.0',
+      id: request.id,
+      result: prompt,
+    };
+  } catch (error) {
+    logger.error('Error generating prompt', { error, prompt: name });
+    return createErrorResponse(request.id, -32603, 'Failed to generate prompt');
+  }
 }
 
 async function handleResourcesList(request: MCPRequest): Promise<MCPResponse> {
@@ -485,6 +761,57 @@ async function getSchema(id: string | number, args: any): Promise<MCPResponse> {
       },
     },
   };
+}
+
+async function handleSamplingCreateMessage(request: MCPRequest): Promise<MCPResponse> {
+  const { messages, modelPreferences, includeContext, metadata } = request.params || {};
+  
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return createErrorResponse(request.id, -32602, 'Missing required parameter: messages');
+  }
+
+  logger.info('Sampling request received', { 
+    messageCount: messages.length,
+    includeContext,
+    modelPreferences,
+    metadata 
+  });
+
+  // Note: This is a placeholder implementation
+  // In a real implementation, this would:
+  // 1. Forward the request to the client's LLM
+  // 2. Optionally include context from MCP resources
+  // 3. Return the LLM's response
+  
+  // For now, we'll return an error indicating sampling is not supported
+  // This is because Lambda-based servers typically don't have direct access to the client's LLM
+  return createErrorResponse(
+    request.id, 
+    -32601, 
+    'Sampling is not supported by this server. Sampling requires client-side LLM access.'
+  );
+  
+  // If you want to implement sampling in the future, you would need to:
+  // 1. Set up a way for the Lambda to communicate back to the client
+  // 2. Have the client handle the actual LLM call
+  // 3. Return the results through the Lambda
+  
+  // Example of what a successful response would look like:
+  /*
+  return {
+    jsonrpc: '2.0',
+    id: request.id,
+    result: {
+      role: 'assistant',
+      content: {
+        type: 'text',
+        text: 'This is the LLM response'
+      },
+      model: 'claude-3-opus-20240229',
+      stopReason: 'end_turn',
+    }
+  };
+  */
 }
 
 function createErrorResponse(

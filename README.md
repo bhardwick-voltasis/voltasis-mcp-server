@@ -11,6 +11,7 @@ A Model Context Protocol (MCP) server deployed on AWS that provides LLM-optimize
 - 🚀 **Global CDN**: Documentation served via CloudFront for fast access
 - 🔒 **Secure**: API key authentication and encrypted storage
 - 📈 **Scalable**: Auto-scales with AWS Lambda, handles unlimited concurrent users
+- 🔄 **Protocol Compatible**: Supports MCP protocol version negotiation for maximum compatibility
 
 ## Quick Start
 
@@ -119,11 +120,17 @@ voltasis-mcp-server/
 ├── scripts/                # Deployment and utility scripts
 │   ├── deploy-mcp-aws.sh   # AWS deployment script
 │   ├── upload-docs.sh      # Document upload script
-│   └── configure-cursor-aws.ts  # Cursor configuration
+│   ├── configure-cursor-aws.ts  # Cursor configuration
+│   ├── generate-index.ts   # Documentation index generator
+│   └── add-endpoint.sh     # Helper to add new endpoints
 ├── mcp-docs/              # Documentation files (uploaded to S3)
 │   ├── api/               # API endpoint documentation
 │   ├── guides/            # Integration guides
 │   └── reference/         # Reference documentation
+├── docs/                  # Project documentation
+│   ├── mcp-server-architecture-decisions.md
+│   ├── mcp-server-implementation-plan.md
+│   └── mcp-server-benefits.md
 └── tests/                 # Test files
 ```
 
@@ -160,6 +167,15 @@ Documentation is stored in S3 and served via CloudFront. To update documentation
    npm run generate-index
    npm run aws:upload-docs dev
    ```
+
+### Adding New Endpoints
+
+Use the helper script to quickly add new endpoint documentation:
+```bash
+./scripts/add-endpoint.sh users-create "Create User" POST /api/v1/users
+```
+
+Then edit the generated file and upload to AWS.
 
 ### Testing
 
@@ -282,8 +298,15 @@ Each environment is completely isolated with its own resources.
 curl -X POST https://your-api-gateway-url/dev/mcp \
   -H "X-Api-Key: your-api-key" \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}'
 ```
+
+### Protocol Version Issues
+
+The MCP server supports protocol version negotiation. If you encounter compatibility issues:
+1. Check Cursor's protocol version in debug logs
+2. The server automatically adapts to the client's protocol version
+3. Currently supports both `2024-11-05` and `2025-03-26` protocol versions
 
 ### Documentation Not Loading
 
@@ -316,12 +339,28 @@ For issues and questions:
 - Create an issue in the GitHub repository
 - Contact the Voltasis development team
 
+## Recent Updates
+
+### Protocol Version Compatibility (June 2025)
+- Fixed protocol version mismatch issues with Cursor IDE
+- Added automatic protocol version negotiation
+- Server now supports both MCP protocol versions `2024-11-05` and `2025-03-26`
+- Enhanced capability declarations for better tool discovery
+
+### Enhanced MCP Features
+- Added prompts support with pre-built templates
+- Implemented sampling/createMessage handler
+- Improved error handling and logging
+- Better support for resource subscriptions
+
 ## Roadmap
 
 - [x] AWS deployment with CDK ✅
 - [x] API Gateway with authentication ✅
 - [x] CloudFront CDN distribution ✅
 - [x] DynamoDB search indexes ✅
+- [x] Protocol version negotiation ✅
+- [x] Prompts support ✅
 - [ ] Advanced semantic search using embeddings
 - [ ] Real-time documentation updates via webhooks
 - [ ] Integration with Voltasis CI/CD pipeline

@@ -12,8 +12,6 @@
     "test": "jest",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
-    "fetch-openapi": "bash scripts/fetch-openapi.sh",
-    "convert": "tsx scripts/convert-to-markdown.ts",
     "generate-index": "tsx scripts/generate-index.ts",
     "build-index": "tsx scripts/generate-index.ts",
     "cdk:synth": "cd infrastructure && cdk synth",

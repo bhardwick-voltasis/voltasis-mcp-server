@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "generated": "2025-06-13T14:20:01.985Z",
+  "generated": "2025-06-13T17:47:27.087Z",
   "totalDocuments": 5,
   "categories": {
     "api": [
@@ -55,7 +55,8 @@
           "mcp",
           "quickstart",
           "cursor",
-          "setup"
+          "setup",
+          "aws"
         ]
       }
     ],
@@ -114,13 +115,14 @@
     {
       "id": "guide-mcp-quickstart",
       "title": "MCP Server Quick Start Guide",
-      "content": "# MCP Server Quick Start Guide  ## Overview  This guide will help you get started with the Voltasis MCP (Model Context Protocol) Server in Cursor IDE. The MCP server provides AI-powered assistance for working with the Voltasis API.  ## Prerequisites  - Cursor IDE installed - Node.js 20.x or higher - Access to the voltasis-mcp-server repository  ## Installation Steps  ### 1. Clone and Build  ```bash # Clone the repository git clone https://github.com/voltasis/voltasis-mcp-server.git cd voltasis-m",
+      "content": "# MCP Server Quick Start Guide  ## Overview  This guide will help you get started with the Voltasis MCP (Model Context Protocol) Server in Cursor IDE. The MCP server is hosted on AWS and provides AI-powered assistance for working with the Voltasis API.  ## Prerequisites  - Cursor IDE installed - Node.js 20.x or higher - AWS CLI configured (for administrators only) - Access to the voltasis-mcp-server repository  ## For Users: Connect to Existing AWS Deployment  If the MCP server is already deploy",
       "category": "guide",
       "tags": [
         "mcp",
         "quickstart",
         "cursor",
-        "setup"
+        "setup",
+        "aws"
       ],
       "weight": 1
     }
