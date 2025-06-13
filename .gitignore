@@ -15,6 +15,10 @@ dist/
 .env
 .env.local
 .env.*.local
+.env.dev
+.env.staging
+.env.prod
+.env.mcp-client
 
 # Logs
 logs/
@@ -39,6 +43,7 @@ infrastructure/cdk.out/
 infrastructure/*.js
 infrastructure/*.d.ts
 infrastructure/*.js.map
+infrastructure/outputs-*.json
 
 # Test coverage
 coverage/

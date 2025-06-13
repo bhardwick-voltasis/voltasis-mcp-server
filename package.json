@@ -9,27 +9,38 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/local-server.ts",
-    "start": "node dist/local-server.js",
     "test": "jest",
     "lint": "eslint src --ext .ts",
     "format": "prettier --write \"src/**/*.ts\"",
     "fetch-openapi": "bash scripts/fetch-openapi.sh",
     "convert": "tsx scripts/convert-to-markdown.ts",
     "generate-index": "tsx scripts/generate-index.ts",
-    "deploy:dev": "bash scripts/deploy.sh dev",
-    "deploy:prod": "bash scripts/deploy.sh prod",
-    "configure-cursor": "tsx scripts/configure-cursor.ts",
+    "build-index": "tsx scripts/generate-index.ts",
     "cdk:synth": "cd infrastructure && cdk synth",
     "cdk:deploy": "cd infrastructure && cdk deploy",
-    "cdk:diff": "cd infrastructure && cdk diff"
+    "cdk:diff": "cd infrastructure && cdk diff",
+    "aws:deploy": "./scripts/deploy-mcp-aws.sh",
+    "aws:deploy:dev": "./scripts/deploy-mcp-aws.sh dev",
+    "aws:deploy:staging": "./scripts/deploy-mcp-aws.sh staging",
+    "aws:deploy:prod": "./scripts/deploy-mcp-aws.sh prod",
+    "aws:upload-docs": "./scripts/upload-docs.sh",
+    "aws:configure": "tsx scripts/configure-cursor-aws.ts"
   },
-  "keywords": ["mcp", "voltasis", "api", "documentation", "llm"],
+  "keywords": [
+    "mcp",
+    "voltasis",
+    "api",
+    "documentation",
+    "llm"
+  ],
   "author": "Voltasis",
   "license": "ISC",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.12.2",
     "@types/node": "20.10.5",
+    "@types/node-fetch": "^2.6.12",
     "dotenv": "16.3.1",
+    "node-fetch": "3.3.2",
     "winston": "3.11.0"
   },
   "devDependencies": {

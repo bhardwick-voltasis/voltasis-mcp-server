@@ -1,9 +1,19 @@
 {
   "version": "1.0.0",
-  "generated": "2025-06-13T13:06:59.609Z",
-  "totalDocuments": 2,
+  "generated": "2025-06-13T14:20:01.985Z",
+  "totalDocuments": 5,
   "categories": {
     "api": [
+      {
+        "id": "api-time-entries-create",
+        "title": "Create Time Entry",
+        "path": "api/endpoints/time-entries-create.md",
+        "tags": [
+          "time-tracking",
+          "time-entries",
+          "organization"
+        ]
+      },
       {
         "id": "api-users-list",
         "title": "List Users",
@@ -25,10 +35,45 @@
         ]
       }
     ],
-    "guides": [],
+    "guides": [
+      {
+        "id": "guide-authentication",
+        "title": "Authentication Guide",
+        "path": "guides/authentication.md",
+        "tags": [
+          "authentication",
+          "security",
+          "bearer-token",
+          "api-key"
+        ]
+      },
+      {
+        "id": "guide-mcp-quickstart",
+        "title": "MCP Server Quick Start Guide",
+        "path": "guides/mcp-quickstart.md",
+        "tags": [
+          "mcp",
+          "quickstart",
+          "cursor",
+          "setup"
+        ]
+      }
+    ],
     "reference": []
   },
   "searchIndex": [
+    {
+      "id": "api-time-entries-create",
+      "title": "Create Time Entry",
+      "content": "# Create Time Entry  ## Quick Reference - **Method**: POST - **Path**: /api/v1/time-entries - **Authentication**: Required - **Organization Context**: Required  ## Description  Create a new time entry for tracking work performed. Time entries are associated with a user and can optionally be linked to projects, tasks, or clients.  ## Request  ### Headers ```json {   \"Authorization\": \"Bearer {token}\",   \"Content-Type\": \"application/json\" } ```  ### Body Parameters | Name | Type | Required | Descri",
+      "category": "api",
+      "tags": [
+        "time-tracking",
+        "time-entries",
+        "organization"
+      ],
+      "weight": 1.5
+    },
     {
       "id": "api-users-list",
       "title": "List Users",
@@ -52,6 +97,32 @@
         "api"
       ],
       "weight": 1.5
+    },
+    {
+      "id": "guide-authentication",
+      "title": "Authentication Guide",
+      "content": "# Authentication Guide  ## Overview  The Voltasis API uses Bearer token authentication to secure all endpoints. This guide explains how to authenticate your API requests and manage authentication tokens.  ## Authentication Methods  ### 1. API Key Authentication (Recommended)  API keys are the recommended method for server-to-server communication.  #### Obtaining an API Key  1. Log into your Voltasis account 2. Navigate to **Settings > API Keys** 3. Click **Create New API Key** 4. Give your key a",
+      "category": "guide",
+      "tags": [
+        "authentication",
+        "security",
+        "bearer-token",
+        "api-key"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "guide-mcp-quickstart",
+      "title": "MCP Server Quick Start Guide",
+      "content": "# MCP Server Quick Start Guide  ## Overview  This guide will help you get started with the Voltasis MCP (Model Context Protocol) Server in Cursor IDE. The MCP server provides AI-powered assistance for working with the Voltasis API.  ## Prerequisites  - Cursor IDE installed - Node.js 20.x or higher - Access to the voltasis-mcp-server repository  ## Installation Steps  ### 1. Clone and Build  ```bash # Clone the repository git clone https://github.com/voltasis/voltasis-mcp-server.git cd voltasis-m",
+      "category": "guide",
+      "tags": [
+        "mcp",
+        "quickstart",
+        "cursor",
+        "setup"
+      ],
+      "weight": 1
     }
   ]
 }

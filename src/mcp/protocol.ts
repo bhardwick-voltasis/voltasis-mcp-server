@@ -37,6 +37,13 @@ export class MCPProtocolHandler {
     logger.debug('Handling MCP request', { method: request.method, id: request.id });
 
     try {
+      // Handle notifications (they don't have responses)
+      if (request.method.startsWith('notifications/')) {
+        logger.debug('Received notification', { method: request.method });
+        // Notifications don't get responses in JSON-RPC
+        return null as any;
+      }
+
       switch (request.method) {
         case 'initialize':
           return this.createResponse(
@@ -94,8 +101,11 @@ export class MCPProtocolHandler {
     // Initialize the document manager
     await this.initialize();
 
+    // Use the client's protocol version for compatibility
+    const clientProtocolVersion = request.params.protocolVersion || this.protocolVersion;
+
     return {
-      protocolVersion: this.protocolVersion,
+      protocolVersion: clientProtocolVersion,
       capabilities: {
         tools: {},
         resources: {}
@@ -189,6 +199,8 @@ export class MCPProtocolHandler {
   }
 
   private async handleResourcesList(_request: ResourceListRequest): Promise<{ resources: Resource[] }> {
+    await this.initialize(); // Ensure initialized
+    
     const documents = this.documentManager.getAvailableResources();
     
     const resources: Resource[] = documents.map(doc => ({
