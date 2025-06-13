@@ -1,0 +1,50 @@
+# Source files (only distribute built files)
+src/
+*.ts
+!*.d.ts
+
+# Infrastructure and deployment
+infrastructure/
+scripts/
+mcp-docs/
+
+# Development files
+.env
+.env.*
+*.log
+node_modules/
+.git/
+.github/
+
+# Test files
+test/
+*.test.js
+*.spec.js
+coverage/
+.nyc_output/
+
+# Documentation (except essential)
+docs/
+*.md
+!README.md
+!LICENSE
+
+# Build artifacts we don't need
+*.map
+tsconfig.json
+.eslintrc*
+.prettierrc*
+jest.config.*
+
+# Debug and monitoring scripts
+monitor-mcp-debug.sh
+test-mcp-*.cjs
+test-mcp-*.js
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db 

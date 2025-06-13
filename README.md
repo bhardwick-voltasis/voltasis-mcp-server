@@ -1,347 +1,207 @@
-# Voltasis MCP Server (AWS Edition)
+# Voltasis MCP Server
 
-A Model Context Protocol (MCP) server deployed on AWS that provides LLM-optimized access to Voltasis API documentation. This server enables AI coding assistants like Cursor to understand and work with the Voltasis API more effectively through a scalable, cloud-based architecture.
+A Model Context Protocol (MCP) server that provides access to Voltasis API documentation through AI assistants like Claude.
 
 ## Features
 
-- ☁️ **AWS-Hosted**: Fully managed on AWS Lambda with API Gateway
-- 🤖 **LLM-Optimized Documentation**: Structured markdown format designed for AI consumption
-- 🔍 **Semantic Search**: Search across all API documentation via DynamoDB indexes
-- 📚 **Comprehensive Tools**: List endpoints, get schemas, search documentation
-- 🚀 **Global CDN**: Documentation served via CloudFront for fast access
-- 🔒 **Secure**: API key authentication and encrypted storage
-- 📈 **Scalable**: Auto-scales with AWS Lambda, handles unlimited concurrent users
-- 🔄 **Protocol Compatible**: Supports MCP protocol version negotiation for maximum compatibility
+- 🔍 **Search Documentation** - Search through API docs, guides, and references
+- 📚 **Browse Endpoints** - List and explore all API endpoints with pagination
+- 📖 **View Schemas** - Access TypeScript/JSON schemas for data models
+- 📝 **Read Guides** - Access authentication and quickstart guides
+- 🔗 **Resource Management** - List and filter all documentation resources
+- 🚀 **Real-time Updates** - Webhook support for automatic documentation updates
 
-## Quick Start
+## Installation
 
 ### Prerequisites
 
-- AWS CLI configured with credentials
-- Node.js 20.x or higher
-- npm or yarn
-- Cursor IDE (or other MCP-compatible editor)
+- Node.js 18+ 
+- AWS CLI configured with appropriate credentials
+- Access to Voltasis AWS CodeArtifact repository
 
-### For Users (Connect to Existing AWS Deployment)
+### For Developers
 
-If the MCP server is already deployed to AWS:
+1. **Configure AWS CodeArtifact**:
+   ```bash
+   aws codeartifact login --tool npm --domain voltasis --repository npm-packages --region us-east-1
+   ```
 
-1. Clone the repository:
-```bash
-git clone https://github.com/voltasis/voltasis-mcp-server.git
-cd voltasis-mcp-server
-```
+2. **Add to your project**:
+   ```json
+   {
+     "devDependencies": {
+       "@voltasis/mcp-client": "^1.0.0"
+     }
+   }
+   ```
 
-2. Install dependencies and build:
-```bash
-npm install
-npm run build
-```
+3. **Install dependencies**:
+   ```bash
+   npm install
+   ```
 
-3. Configure Cursor for AWS:
-```bash
-npm run aws:configure dev  # or staging/prod
-```
+4. **Configure Cursor**:
+   Add to `~/.cursor/mcp.json`:
+   ```json
+   {
+     "mcpServers": {
+       "voltasis-api": {
+         "command": "npx",
+         "args": ["@voltasis/mcp-client"],
+         "env": {
+           "MCP_ENDPOINT": "https://u77ssoo8lc.execute-api.us-east-1.amazonaws.com/dev",
+           "VOLTASIS_MCP_API_KEY": "YOUR_API_KEY_HERE",
+           "NODE_ENV": "production"
+         }
+       }
+     }
+   }
+   ```
 
-4. Restart Cursor to apply the configuration.
+5. **Restart Cursor** to activate the MCP tools.
 
-### For Administrators (Deploy to AWS)
+## Available Tools
 
-To deploy a new MCP server to AWS:
+### 🔍 search_documentation
+Search through Voltasis API documentation for relevant information.
 
-1. Deploy the infrastructure:
-```bash
-npm run aws:deploy:dev  # Creates all AWS resources
-```
+**Parameters:**
+- `query` (required): Search query to find relevant documentation
+- `category` (optional): Filter by category - `api`, `guide`, `reference`, or `all` (default)
 
-2. Upload documentation:
-```bash
-npm run aws:upload-docs dev
-```
+### 📋 list_endpoints
+List all available API endpoints with pagination support.
 
-3. Configure Cursor:
-```bash
-npm run aws:configure dev
-```
+**Parameters:**
+- `tag` (optional): Filter endpoints by tag
+- `category` (optional): Filter by category
+- `page` (optional): Page number (0-based, default: 0)
+- `pageSize` (optional): Items per page (default: 50, max: 100)
 
-## Usage
+### 🔎 get_endpoint_details
+Get detailed information about a specific API endpoint.
 
-Once configured, the MCP server provides several tools in Cursor:
+**Parameters:**
+- `endpoint` (required): The endpoint path (e.g., `/api/v1/users`)
+- `method` (optional): HTTP method (GET, POST, PUT, DELETE, PATCH)
 
-### Available Tools
+### 📊 list_schemas
+List all available API schemas with pagination.
 
-1. **search_documentation**
-   - Search through all Voltasis API documentation
-   - Parameters:
-     - `query` (required): Search terms
-     - `category` (optional): 'api', 'guide', 'reference', or 'all'
+**Parameters:**
+- `page` (optional): Page number (0-based, default: 0)
+- `pageSize` (optional): Items per page (default: 50, max: 100)
 
-2. **get_endpoint_details**
-   - Get detailed information about a specific API endpoint
-   - Parameters:
-     - `endpoint` (required): The endpoint path (e.g., '/api/v1/users')
-     - `method` (optional): HTTP method (GET, POST, PUT, DELETE, PATCH)
+### 📐 get_schema
+Get TypeScript/JSON schema for a specific model.
 
-3. **list_endpoints**
-   - List all available API endpoints
-   - Parameters:
-     - `tag` (optional): Filter by tag
-     - `category` (optional): Filter by category
+**Parameters:**
+- `schemaName` (required): Name of the schema (e.g., User, TimeEntry)
+- `format` (optional): Output format - `typescript` (default) or `json`
 
-4. **get_schema**
-   - Get TypeScript/JSON schema for a data model
-   - Parameters:
-     - `schemaName` (required): Name of the schema
-     - `format` (optional): 'typescript' or 'json'
+### 📄 get_document
+Get any document by its ID (works for guides, endpoints, schemas).
 
-### Example Usage in Cursor
+**Parameters:**
+- `documentId` (required): Document ID or path
 
-In Cursor, you can use these tools by asking questions like:
+### 📚 list_guides
+List all available guides.
 
-- "Search for authentication documentation"
-- "Show me the user creation endpoint"
-- "List all endpoints tagged with 'users'"
-- "Get the TypeScript schema for TimeEntry"
+**Parameters:**
+- `page` (optional): Page number (0-based, default: 0)
+- `pageSize` (optional): Items per page (default: 50, max: 100)
 
-## Project Structure
+### 🗂️ list_resources
+List all available resources by category.
 
-```
-voltasis-mcp-server/
-├── src/
-│   ├── mcp-aws-client.ts   # AWS MCP client (connects to API Gateway)
-│   ├── mcp/                # MCP protocol implementation
-│   ├── documents/          # Document management
-│   ├── types/              # TypeScript type definitions
-│   └── utils/              # Utility functions
-├── infrastructure/         # AWS CDK infrastructure code
-│   ├── lambda/             # Lambda function handlers
-│   ├── lib/                # CDK stack definitions
-│   └── bin/                # CDK app entry point
-├── scripts/                # Deployment and utility scripts
-│   ├── deploy-mcp-aws.sh   # AWS deployment script
-│   ├── upload-docs.sh      # Document upload script
-│   ├── configure-cursor-aws.ts  # Cursor configuration
-│   ├── generate-index.ts   # Documentation index generator
-│   └── add-endpoint.sh     # Helper to add new endpoints
-├── mcp-docs/              # Documentation files (uploaded to S3)
-│   ├── api/               # API endpoint documentation
-│   ├── guides/            # Integration guides
-│   └── reference/         # Reference documentation
-├── docs/                  # Project documentation
-│   ├── mcp-server-architecture-decisions.md
-│   ├── mcp-server-implementation-plan.md
-│   └── mcp-server-benefits.md
-└── tests/                 # Test files
-```
+**Parameters:**
+- `category` (optional): Filter by category - `api`, `guide`, `reference`, or `all` (default)
+- `page` (optional): Page number (0-based, default: 0)
+- `pageSize` (optional): Items per page (default: 50, max: 100)
+
+## Architecture
+
+The system consists of:
+
+- **MCP Client**: Lightweight Node.js proxy that runs locally
+- **API Gateway**: HTTPS endpoint with API key authentication
+- **Lambda Functions**: Serverless handlers for MCP protocol
+- **DynamoDB**: Stores document metadata and search indexes
+- **S3**: Stores actual documentation content
+- **CloudFront**: CDN for fast global access
 
 ## Development
 
-### Managing Documentation
-
-Documentation is stored in S3 and served via CloudFront. To update documentation:
-
-1. Place markdown files in the `mcp-docs` directory following this structure:
-   ```
-   mcp-docs/
-   ├── api/endpoints/
-   ├── api/schemas/
-   ├── guides/
-   └── reference/
-   ```
-
-2. Each markdown file should have frontmatter:
-   ```markdown
-   ---
-   id: unique-id
-   title: Document Title
-   category: api|guide|reference
-   tags: [tag1, tag2]
-   related: [related-doc-id]
-   version: 1.0.0
-   last_updated: 2024-01-01
-   ---
-   ```
-
-3. Generate the index and upload to AWS:
-   ```bash
-   npm run generate-index
-   npm run aws:upload-docs dev
-   ```
-
-### Syncing with OpenAPI Documentation
-
-The MCP server can automatically sync with Voltasis API OpenAPI documentation:
-
-1. **Quick Sync** (from voltasis-api directory):
-   ```bash
-   ./scripts/openapi-build-deploy-with-mcp.sh dev none false true
-   ```
-
-2. **Full Setup Guide**: See [OpenAPI Sync Setup Guide](docs/openapi-sync-setup.md)
-
-3. **Integration Details**: See [OpenAPI MCP Integration](docs/openapi-mcp-integration.md)
-
-This converts OpenAPI specs to MCP-friendly markdown, generating 197+ endpoint documents and 64+ schema documents automatically.
-
-### Adding New Endpoints
-
-Use the helper script to quickly add new endpoint documentation:
-```bash
-./scripts/add-endpoint.sh users-create "Create User" POST /api/v1/users
-```
-
-Then edit the generated file and upload to AWS.
-
-### Testing
+### Building from Source
 
 ```bash
+# Clone the repository
+git clone https://github.com/voltasis/voltasis-mcp-server.git
+cd voltasis-mcp-server
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Run tests
 npm test
 ```
 
-### Linting
+### Publishing Updates
+
+1. Update version in `package.json`
+2. Build the project: `npm run build`
+3. Login to CodeArtifact: `aws codeartifact login --tool npm --domain voltasis --repository npm-packages`
+4. Publish: `npm publish`
+
+### Infrastructure Deployment
 
 ```bash
-npm run lint
+# Deploy AWS infrastructure
+cd infrastructure
+npm run deploy
+
+# Upload documentation to S3
+npm run aws:upload-docs
 ```
-
-## Configuration
-
-### AWS Environment Variables
-
-The deployment scripts create environment-specific configuration files:
-- `.env.dev` - Development environment
-- `.env.staging` - Staging environment  
-- `.env.prod` - Production environment
-
-These files contain:
-- API Gateway endpoint URLs
-- CloudFront distribution URLs
-- API key IDs
-- Stack names
-
-### Cursor Configuration
-
-The MCP server is configured in Cursor to connect to AWS:
-```bash
-npm run aws:configure dev  # or staging/prod
-```
-
-This updates `~/.cursor/mcp.json` with the AWS endpoint and authentication details.
-
-### Automatic Connection
-
-The MCP server connects automatically when:
-1. You open Cursor IDE
-2. You interact with the Voltasis API context in a conversation
-
-All requests are routed through API Gateway to Lambda functions in AWS.
-
-## AWS Deployment
-
-The project includes AWS CDK infrastructure for deploying a production-ready MCP server:
-
-### Prerequisites
-
-- AWS CLI configured with credentials
-- Node.js 20.x or higher
-- CDK CLI: `npm install -g aws-cdk`
-
-### Deployment Steps
-
-1. **Deploy the infrastructure**:
-```bash
-./scripts/deploy-mcp-aws.sh dev  # or staging/prod
-```
-
-This creates:
-- Lambda functions for MCP protocol handling
-- API Gateway with API key authentication
-- S3 buckets for documentation storage
-- CloudFront CDN for global distribution
-- DynamoDB tables for search indexes
-
-2. **Upload documentation**:
-```bash
-./scripts/upload-docs.sh dev
-```
-
-3. **Configure Cursor for AWS**:
-```bash
-tsx scripts/configure-cursor-aws.ts dev
-```
-
-### Architecture
-
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Cursor IDE     │────▶│  API Gateway    │────▶│ Lambda Function │
-│  (MCP Client)   │     │  (API Key Auth) │     │  (MCP Handler)  │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-                                                          │
-                                ┌─────────────────────────┴─────────┐
-                                │                                   │
-                        ┌───────▼────────┐              ┌──────────▼────────┐
-                        │   DynamoDB     │              │    S3 Bucket      │
-                        │ (Search Index) │              │ (Documentation)   │
-                        └────────────────┘              └───────────────────┘
-                                                                │
-                                                        ┌───────▼────────┐
-                                                        │   CloudFront   │
-                                                        │     (CDN)      │
-                                                        └────────────────┘
-```
-
-### Multi-Stage Support
-
-Deploy to different environments:
-- **Development**: `./scripts/deploy-mcp-aws.sh dev`
-- **Staging**: `./scripts/deploy-mcp-aws.sh staging`
-- **Production**: `./scripts/deploy-mcp-aws.sh prod`
-
-Each environment is completely isolated with its own resources.
 
 ## Troubleshooting
 
-### MCP Server Not Appearing in Cursor
+### MCP tools not appearing in Cursor?
 
-1. Ensure you've run `npm run build`
-2. Run `npm run aws:configure dev` (not the local configure)
-3. Restart Cursor completely
-4. Check the MCP configuration: `cat ~/.cursor/mcp.json`
-5. Verify the AWS endpoint is responding:
-```bash
-curl -X POST https://your-api-gateway-url/dev/mcp \
-  -H "X-Api-Key: your-api-key" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{}}}'
-```
+1. Verify installation:
+   ```bash
+   npx @voltasis/mcp-client --version
+   ```
 
-### Protocol Version Issues
+2. Check Cursor logs:
+   - View → Output → MCP
 
-The MCP server supports protocol version negotiation. If you encounter compatibility issues:
-1. Check Cursor's protocol version in debug logs
-2. The server automatically adapts to the client's protocol version
-3. Currently supports both `2024-11-05` and `2025-03-26` protocol versions
+3. Test the API directly:
+   ```bash
+   curl -X POST https://u77ssoo8lc.execute-api.us-east-1.amazonaws.com/dev/mcp \
+     -H "x-api-key: YOUR_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+   ```
 
-### Documentation Not Loading
+4. Ensure AWS CodeArtifact login is active (expires after 12 hours)
 
-1. Check CloudWatch logs for Lambda errors
-2. Verify documentation is uploaded to S3
-3. Check DynamoDB for index entries
-4. Re-upload documentation: `npm run aws:upload-docs dev`
+### Authentication Issues?
 
-### API Key Issues
-
-1. Verify API key is correctly configured in environment
-2. Check API Gateway for key validation errors
-3. Regenerate API key if needed through AWS Console
+- Verify your API key is correct in `~/.cursor/mcp.json`
+- Check AWS credentials: `aws sts get-caller-identity`
+- Re-login to CodeArtifact: `aws codeartifact login --tool npm --domain voltasis --repository npm-packages`
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests for new functionality
+4. Run tests: `npm test`
 5. Submit a pull request
 
 ## License

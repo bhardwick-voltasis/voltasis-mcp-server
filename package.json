@@ -1,11 +1,18 @@
 {
-  "name": "voltasis-mcp-server",
+  "name": "@voltasis/mcp-client",
   "version": "1.0.0",
-  "description": "Model Context Protocol server for Voltasis API documentation",
+  "description": "Model Context Protocol client for Voltasis API documentation",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
     "voltasis-mcp-client": "./dist/mcp-aws-client.js"
+  },
+  "publishConfig": {
+    "registry": "https://voltasis-266160728489.d.codeartifact.us-east-1.amazonaws.com/npm/npm-packages/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/voltasis/voltasis-mcp-server.git"
   },
   "directories": {
     "doc": "docs"
