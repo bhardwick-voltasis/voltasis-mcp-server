@@ -1,0 +1,38 @@
+graph TD
+    %% MCP Documentation Update Process Flow
+    %% This diagram shows how API documentation flows from voltasis_api to MCP server
+    
+    A[voltasis_api repo] -->|1. Add/Update endpoints| B[OpenAPI Spec<br/>infrastructure/lambda/*/handler.ts]
+    B -->|2. Build OpenAPI| C[npm run openapi:build<br/>Creates docs/swagger-ui/openapi.json]
+    C -->|3. Deploy API| D[cdk deploy<br/>Updates Lambda functions]
+    C -->|4. Convert to MCP| E[openapi-to-mcp.js<br/>Generates markdown files]
+    E -->|5. Output| F[voltasis-mcp-server/mcp-docs/api/<br/>endpoints/*.md<br/>schemas/*.md]
+    F -->|6. Generate Index| G[npm run generate-index<br/>Creates index.json]
+    G -->|7. Upload to S3| H[upload-docs.sh<br/>aws s3 sync]
+    H -->|8. Store in S3| I[S3 Bucket<br/>voltasis-mcp-docs-dev]
+    H -->|9. Trigger| J[Index Builder Lambda<br/>Processes documents]
+    J -->|10. Update| K[DynamoDB<br/>voltasis-mcp-index-dev]
+    H -->|11. Invalidate| L[CloudFront<br/>Cache invalidation]
+    
+    M[MCP Client] -->|Query| N[MCP Server Lambda]
+    N -->|Read from| K
+    N -->|Fetch content| I
+    
+    %% Alternative automated flow
+    O[GitHub Push] -->|Webhook| P[Webhook Handler Lambda]
+    P -->|Fetch docs| Q[GitHub API]
+    Q -->|Process| J
+    
+    %% Styling
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style M fill:#9ff,stroke:#333,stroke-width:2px
+    style I fill:#ff9,stroke:#333,stroke-width:2px
+    style K fill:#ff9,stroke:#333,stroke-width:2px
+    style O fill:#9f9,stroke:#333,stroke-width:2px
+    
+    %% Add notes
+    A -.->|Manual Process| R[Developer runs scripts]
+    O -.->|Automated Process| S[GitHub Actions trigger]
+    
+    style R fill:#fff,stroke:#999,stroke-dasharray: 5 5
+    style S fill:#fff,stroke:#999,stroke-dasharray: 5 5 

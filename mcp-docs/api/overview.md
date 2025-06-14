@@ -4,12 +4,12 @@ title: Voltasis Time Management API
 category: api
 tags: [overview, api]
 version: 2.0.4
-last_updated: 2025-06-13T19:34:08.981Z
+last_updated: 2025-06-14T12:12:37.702Z
 ---
 
 # Voltasis Time Management API
 
-**Last Updated:** June 13, 2025 at 3:34 PM EDT
+**Last Updated:** June 14, 2025 at 8:12 AM EDT
 
 Comprehensive time tracking and project management API for Voltasis.
 
@@ -71,11 +71,11 @@ The Voltasis API implements a comprehensive multi-tenant architecture:
 
 ## Available Endpoints
 
-Total endpoints: 197
+Total endpoints: 206
 
 ## Schemas
 
-Total schemas: 64
+Total schemas: 67
 
 ## Authentication
 

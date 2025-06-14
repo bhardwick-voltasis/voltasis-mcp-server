@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2025-06-13T19:34:10.112Z",
-  "totalDocuments": 264,
+  "generated": "2025-06-14T12:18:27.896Z",
+  "totalDocuments": 276,
   "categories": {
     "api": [
       {
@@ -170,6 +170,78 @@
         "path": "api/endpoints/auth-verify-email-post.md",
         "tags": [
           "Authentication"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-products-get",
+        "title": "List products",
+        "path": "api/endpoints/billing-organizations-organizationId-products-get.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-products-post",
+        "title": "Create a product",
+        "path": "api/endpoints/billing-organizations-organizationId-products-post.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-products-productId-prices-get",
+        "title": "List prices for a product",
+        "path": "api/endpoints/billing-organizations-organizationId-products-productId-prices-get.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-products-productId-prices-post",
+        "title": "Create a price",
+        "path": "api/endpoints/billing-organizations-organizationId-products-productId-prices-post.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-stripe-account-get",
+        "title": "Get Stripe account details",
+        "path": "api/endpoints/billing-organizations-organizationId-stripe-account-get.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-stripe-account-login-link-post",
+        "title": "Create dashboard login link",
+        "path": "api/endpoints/billing-organizations-organizationId-stripe-account-login-link-post.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-stripe-account-onboarding-link-post",
+        "title": "Create onboarding link",
+        "path": "api/endpoints/billing-organizations-organizationId-stripe-account-onboarding-link-post.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-organizations-organizationId-stripe-account-post",
+        "title": "Create Stripe Connect account",
+        "path": "api/endpoints/billing-organizations-organizationId-stripe-account-post.md",
+        "tags": [
+          "Billing Management"
+        ]
+      },
+      {
+        "id": "billing-webhooks-stripe-post",
+        "title": "Stripe webhook endpoint",
+        "path": "api/endpoints/billing-webhooks-stripe-post.md",
+        "tags": [
+          "Billing Management"
         ]
       },
       {
@@ -1968,6 +2040,33 @@
         ]
       },
       {
+        "id": "schema-stripeaccount",
+        "title": "StripeAccount Schema",
+        "path": "api/schemas/stripeaccount.md",
+        "tags": [
+          "schema",
+          "stripeaccount"
+        ]
+      },
+      {
+        "id": "schema-stripeprice",
+        "title": "StripePrice Schema",
+        "path": "api/schemas/stripeprice.md",
+        "tags": [
+          "schema",
+          "stripeprice"
+        ]
+      },
+      {
+        "id": "schema-stripeproduct",
+        "title": "StripeProduct Schema",
+        "path": "api/schemas/stripeproduct.md",
+        "tags": [
+          "schema",
+          "stripeproduct"
+        ]
+      },
+      {
         "id": "schema-systemstats",
         "title": "SystemStats Schema",
         "path": "api/schemas/systemstats.md",
@@ -2401,6 +2500,96 @@
       "category": "api",
       "tags": [
         "Authentication"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-products-get",
+      "title": "List products",
+      "content": "# List products  List all products for the organization.  **Multi-Tenant**: Returns only products for the authenticated user's organization   ## Endpoint Details  - **Method**: `GET` - **Path**: `/billing/organizations/{organizationId}/products` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## Parameters  ### Query Parameters  | Name | Type | Required | Description | |------|------|----------|-------------| | `active` | `boolean` | ❌ | Filter by active status | | `limit` | `intege",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-products-post",
+      "title": "Create a product",
+      "content": "# Create a product  Create a new product in Stripe for the organization.  **Requirements**: - Organization must have completed Stripe Connect onboarding - User must have admin or manager role  **Multi-Tenant**: Products are automatically scoped to the organization   ## Endpoint Details  - **Method**: `POST` - **Path**: `/billing/organizations/{organizationId}/products` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## Request Body  **Required**: ✅  ### Content-Type: `application/js",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-products-productId-prices-get",
+      "title": "List prices for a product",
+      "content": "# List prices for a product  List all prices for a specific product.  **Multi-Tenant**: Returns only prices for products owned by the organization   ## Endpoint Details  - **Method**: `GET` - **Path**: `/billing/organizations/{organizationId}/products/{productId}/prices` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## Parameters  ### Query Parameters  | Name | Type | Required | Description | |------|------|----------|-------------| | `active` | `boolean` | ❌ | Filter by active st",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-products-productId-prices-post",
+      "title": "Create a price",
+      "content": "# Create a price  Create a new price for a product. Supports both one-time and recurring prices.  **Requirements**: - Product must exist and belong to the organization - Organization must have completed Stripe Connect onboarding  **Multi-Tenant**: Prices are automatically scoped to the organization's product   ## Endpoint Details  - **Method**: `POST` - **Path**: `/billing/organizations/{organizationId}/products/{productId}/prices` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## ",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-stripe-account-get",
+      "title": "Get Stripe account details",
+      "content": "# Get Stripe account details  Retrieve the Stripe Connect account details for the organization.  **Multi-Tenant**: Returns only the account for the authenticated user's organization   ## Endpoint Details  - **Method**: `GET` - **Path**: `/billing/organizations/{organizationId}/stripe-account` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## Responses  ### 200 Stripe account details retrieved successfully  **Content-Type**: `application/json`  ```json {   \"type\": \"object\",   \"prope",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-stripe-account-login-link-post",
+      "title": "Create dashboard login link",
+      "content": "# Create dashboard login link  Generate a login link for accessing the Stripe Express dashboard.  **Requirements**: - Organization must have a Stripe account - Onboarding must be completed - User must have admin or manager role  **Multi-Tenant**: Links provide access only to the organization's Stripe dashboard   ## Endpoint Details  - **Method**: `POST` - **Path**: `/billing/organizations/{organizationId}/stripe-account/login-link` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## ",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-stripe-account-onboarding-link-post",
+      "title": "Create onboarding link",
+      "content": "# Create onboarding link  Generate a new onboarding link for completing Stripe Connect setup.  **Requirements**: - Organization must have a Stripe account - Onboarding must not be completed - User must have admin role  **Multi-Tenant**: Links are scoped to the organization's Stripe account   ## Endpoint Details  - **Method**: `POST` - **Path**: `/billing/organizations/{organizationId}/stripe-account/onboarding-link` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## Request Body  **",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-organizations-organizationId-stripe-account-post",
+      "title": "Create Stripe Connect account",
+      "content": "# Create Stripe Connect account  Create a Stripe Connect Express account for the organization.  **Requirements**: - User must have admin role - Organization must not already have a Stripe account  **Multi-Tenant**: Each organization can have one Stripe account   ## Endpoint Details  - **Method**: `POST` - **Path**: `/billing/organizations/{organizationId}/stripe-account` - **Operation ID**: `N/A` - **Tags**: `Billing Management`   ## Request Body  **Required**: ✅  ### Content-Type: `application/",
+      "category": "api",
+      "tags": [
+        "Billing Management"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "billing-webhooks-stripe-post",
+      "title": "Stripe webhook endpoint",
+      "content": "# Stripe webhook endpoint  Receives webhook events from Stripe. This endpoint is called by Stripe when events occur.  **Security**:  - No authentication required (webhook signature verification is performed) - Events are verified using stripe-signature header - Only processes events for known Stripe accounts  **Supported Events**: - account.updated - account.application.authorized - account.application.deauthorized - capability.updated - payment_intent.succeeded - payment_intent.failed - charge.",
+      "category": "api",
+      "tags": [
+        "Billing Management"
       ],
       "weight": 1.5
     },
@@ -4167,7 +4356,7 @@
     {
       "id": "api-overview",
       "title": "Voltasis Time Management API",
-      "content": "# Voltasis Time Management API  **Last Updated:** June 13, 2025 at 3:34 PM EDT  Comprehensive time tracking and project management API for Voltasis.  ## Authentication ✅ **COGNITO V2** This API uses **AWS Cognito V2** with **database-driven authentication** for enhanced security and performance. All endpoints (except public invitation endpoints) require JWT authentication with **database synchronization**.  ### Cognito V2 Authentication Flow 1. **Sign Up/Login**: Use AWS Cognito SDK to authentic",
+      "content": "# Voltasis Time Management API  **Last Updated:** June 14, 2025 at 8:12 AM EDT  Comprehensive time tracking and project management API for Voltasis.  ## Authentication ✅ **COGNITO V2** This API uses **AWS Cognito V2** with **database-driven authentication** for enhanced security and performance. All endpoints (except public invitation endpoints) require JWT authentication with **database synchronization**.  ### Cognito V2 Authentication Flow 1. **Sign Up/Login**: Use AWS Cognito SDK to authentic",
       "category": "api",
       "tags": [
         "overview",
@@ -4634,6 +4823,39 @@
       "tags": [
         "schema",
         "securitysettings"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "schema-stripeaccount",
+      "title": "StripeAccount Schema",
+      "content": "# StripeAccount  Schema definition for StripeAccount  ## Schema Definition  ```typescript interface StripeAccount {   organizationId: string;   stripeAccountId: string;   type: 'express' | 'standard' | 'custom';   country?: string;   email?: string;   chargesEnabled: boolean;   payoutsEnabled: boolean;   detailsSubmitted?: boolean;   onboardingCompleted: boolean;   capabilities?: Record<string, any>;   requirements?: Record<string, any>;   metadata?: Record<string, any>;   createdAt: string;   u",
+      "category": "api",
+      "tags": [
+        "schema",
+        "stripeaccount"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "schema-stripeprice",
+      "title": "StripePrice Schema",
+      "content": "# StripePrice  Schema definition for StripePrice  ## Schema Definition  ```typescript interface StripePrice {   id: string;   organizationId: string;   productId: string;   stripePriceId: string;   stripeProductId: string;   active: boolean;   currency: string;   unitAmount: number;   nickname?: string;   type: 'one_time' | 'recurring';   recurring?: Record<string, any>;   billingScheme: 'per_unit' | 'tiered';   tiers?: Record<string, any>[];   tiersMode?: 'graduated' | 'volume';   metadata?: Re",
+      "category": "api",
+      "tags": [
+        "schema",
+        "stripeprice"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "schema-stripeproduct",
+      "title": "StripeProduct Schema",
+      "content": "# StripeProduct  Schema definition for StripeProduct  ## Schema Definition  ```typescript interface StripeProduct {   id: string;   organizationId: string;   stripeProductId: string;   name: string;   description?: string;   active: boolean;   metadata?: Record<string, any>;   createdAt: string;   updatedAt: string; } ```  ## Properties  | Property | Type | Required | Description | |----------|------|----------|-------------| | `id` | `string` | ✅ | Internal product ID | | `organizationId` | `st",
+      "category": "api",
+      "tags": [
+        "schema",
+        "stripeproduct"
       ],
       "weight": 1.5
     },
