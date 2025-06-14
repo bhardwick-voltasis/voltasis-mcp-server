@@ -24,7 +24,7 @@ From the `voltasis_api` directory:
 
 ```bash
 # Build OpenAPI docs and sync with MCP, then upload to AWS
-./scripts/openapi-build-deploy-with-mcp.sh dev none true
+npm run aws:upload-docs dev
 
 # For other environments:
 ./scripts/openapi-build-deploy-with-mcp.sh staging none true
